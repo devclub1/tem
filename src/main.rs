@@ -1,18 +1,15 @@
 mod gitprocessor;
 mod loader;
 mod processor;
+mod config;
 
 use clap::Parser;
-use home::home_dir;
 use processor::Processor;
 use std::collections::HashMap;
 use std::fs::File;
 use std::panic;
 use std::path::Path;
-use std::process::exit;
 use toml::Value;
-
-const CONFIG_LOCATION: &str = "/.config/temple/config.toml";
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -23,7 +20,7 @@ struct Args {
 
 fn main() {
     bind_panic_handler();
-    create_config_file();
+    create_config_file(&config::build_default_home_config_path());
 
     let args = Args::parse();
     let processors = loader::load_processors();
@@ -48,14 +45,11 @@ fn bind_panic_handler() {
     }));
 }
 
-fn create_config_file() {
-    let home_path = home_dir().expect("show:Failed to read home dir");
-    let config_file = format!("{}{}", home_path.display(), CONFIG_LOCATION);
-
-    let path = Path::new(&config_file);
+fn create_config_file(config_path: &str) {
+    let path = Path::new(&config_path);
 
     if !path.exists() {
-        print!("Creating config file: {}", &config_file);
+        print!("Creating config file: {}", &config_path);
 
         if let Some(parent) = path.parent() {
             if !parent.exists() {
@@ -68,19 +62,10 @@ fn create_config_file() {
 }
 
 fn load_config() -> HashMap<String, Value> {
-    let home_path = home_dir().expect("show:Failed to read home dir");
-    let config_file = format!("{}{}", home_path.display(), CONFIG_LOCATION);
-    let unparsed_config =
-        std::fs::read_to_string(&config_file).expect("show:Failed to read config file");
-    let configs: HashMap<String, Value> =
-        toml::from_str(&unparsed_config).expect("show:Failed to parse config file as TOML");
+    let home_path = config::build_default_home_config_path();
+    let raw_config_file = config::load_raw_config(&home_path);
 
-    if configs.len() == 0 {
-        println!("Config file is empty");
-        exit(0);
-    }
-
-    configs
+    config::load_toml_config(&raw_config_file)
 }
 
 fn execute_processor(

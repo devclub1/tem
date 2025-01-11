@@ -1,12 +1,15 @@
+mod gitprovider;
+mod provider;
+
 use clap::Parser;
+use gitprovider::GitProvider;
 use home::home_dir;
+use provider::Provider;
 use std::collections::HashMap;
 use std::fs::File;
-use std::os::unix::process::CommandExt;
 use std::panic;
 use std::path::Path;
-use std::process::{exit, Command};
-use std::{env, fs};
+use std::process::exit;
 use toml::Value;
 
 const CONFIG_LOCATION: &str = "/.config/temple/config.toml";
@@ -16,54 +19,6 @@ const CONFIG_LOCATION: &str = "/.config/temple/config.toml";
 struct Args {
     template: String,
     project: Option<String>,
-}
-
-trait Provider {
-    fn types(&self) -> String;
-    fn process(&self, prog_args: Args, config: &Value) -> bool;
-}
-
-struct GitProvider {}
-impl Provider for GitProvider {
-    fn types(&self) -> String {
-        return "git".to_string();
-    }
-
-    fn process(&self, prog_args: Args, config: &Value) -> bool {
-        let mut args: Vec<&str> = vec![];
-
-        match config.get("branch").take() {
-            Some(branch) => {
-                args.push("-b");
-                args.push(branch.as_str().unwrap());
-            }
-            None => {}
-        };
-
-        args.push(
-            config
-                .get("source")
-                .take()
-                .expect("show:git: source parameter is mandatory")
-                .as_str()
-                .unwrap(),
-        );
-
-        match &prog_args.project {
-            Some(directory) => {
-                args.push(directory);
-            }
-            None => {}
-        };
-
-        Command::new("git")
-            .arg("clone")
-            .args(args)
-            .current_dir(env::current_dir().unwrap())
-            .exec();
-
-        return true;
-    }
 }
 
 fn main() {
@@ -99,7 +54,7 @@ fn initialize_processors() -> HashMap<String, Box<dyn Provider>> {
     let git_provider: Box<dyn Provider> = Box::new(GitProvider {});
     processors.insert(git_provider.types(), git_provider);
 
-    return processors;
+    processors
 }
 
 fn create_config_file() {
@@ -113,11 +68,11 @@ fn create_config_file() {
 
         if let Some(parent) = path.parent() {
             if !parent.exists() {
-                fs::create_dir_all(parent);
+                std::fs::create_dir_all(parent).expect("show:Couldn't create config hierarchy");
             }
         }
 
-        File::create(path);
+        File::create(path).expect("show:Couldn't create config file");
     }
 }
 
@@ -125,7 +80,7 @@ fn load_config() -> HashMap<String, Value> {
     let home_path = home_dir().expect("show:Failed to read home dir");
     let config_file = format!("{}{}", home_path.display(), CONFIG_LOCATION);
     let unparsed_config =
-        fs::read_to_string(&config_file).expect("show:Failed to read config file");
+        std::fs::read_to_string(&config_file).expect("show:Failed to read config file");
     let configs: HashMap<String, Value> =
         toml::from_str(&unparsed_config).expect("show:Failed to parse config file as TOML");
 
@@ -134,7 +89,7 @@ fn load_config() -> HashMap<String, Value> {
         exit(0);
     }
 
-    return configs;
+    configs
 }
 
 fn execute_provider(
@@ -152,5 +107,5 @@ fn execute_provider(
         }
     }
 
-    return false;
+    false
 }

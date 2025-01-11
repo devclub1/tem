@@ -62,15 +62,17 @@ impl Processor for GitProcessor {
             .arg("clone")
             .args(args)
             .current_dir(env::current_dir().unwrap())
-            .output()
-            .expect("show:Repository cloning failed");
+            .status()
+            .ok()
+            .filter(|status| status.success())
+            .and_then(|_| {
+                let _ = Command::new("rm")
+                    .arg("-r")
+                    .arg(format!("{}/.git", target_directory))
+                    .output();
 
-        Command::new("rm")
-            .arg("-r")
-            .arg(format!("{}/.git", target_directory))
-            .output()
-            .expect("show:Couldn't delete .git directory");
-
-        true
+                Some(true)
+            })
+            .unwrap_or(false)
     }
 }

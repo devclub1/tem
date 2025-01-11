@@ -1,7 +1,7 @@
+mod config;
 mod gitprocessor;
 mod loader;
 mod processor;
-mod config;
 
 use clap::Parser;
 use processor::Processor;
@@ -27,8 +27,8 @@ fn main() {
     let configs = load_config();
 
     match execute_processor(processors, configs, args) {
-        true => println!("Success"),
-        false => println!("Error"),
+        true => println!("\nhappy coding! (◕‿◕)"),
+        false => println!("\nouch, something bad happened during processing :("),
     }
 }
 

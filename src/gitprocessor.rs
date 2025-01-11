@@ -1,11 +1,12 @@
-use crate::provider::Provider;
+use crate::processor::Processor;
 use crate::Args;
 use std::env;
 use std::process::Command;
 use toml::Value;
 
-pub struct GitProvider {}
-impl Provider for GitProvider {
+pub struct GitProcessor;
+
+impl Processor for GitProcessor {
     fn types(&self) -> String {
         "git".to_string()
     }
@@ -46,7 +47,11 @@ impl Provider for GitProvider {
                     .to_string();
 
                 if repo_name.ends_with(".git") {
-                    repo_name.rsplit_once(".").map(|(first, _)| first).unwrap().to_string()
+                    repo_name
+                        .rsplit_once(".")
+                        .map(|(first, _)| first)
+                        .unwrap()
+                        .to_string()
                 } else {
                     repo_name
                 }

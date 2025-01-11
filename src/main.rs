@@ -1,10 +1,10 @@
-mod gitprovider;
-mod provider;
+mod gitprocessor;
+mod loader;
+mod processor;
 
 use clap::Parser;
-use gitprovider::GitProvider;
 use home::home_dir;
-use provider::Provider;
+use processor::Processor;
 use std::collections::HashMap;
 use std::fs::File;
 use std::panic;
@@ -26,10 +26,10 @@ fn main() {
     create_config_file();
 
     let args = Args::parse();
-    let processors = initialize_processors();
+    let processors = loader::load_processors();
     let configs = load_config();
 
-    match execute_provider(processors, configs, args) {
+    match execute_processor(processors, configs, args) {
         true => println!("Success"),
         false => println!("Error"),
     }
@@ -46,15 +46,6 @@ fn bind_panic_handler() {
 
         println!("{}", info);
     }));
-}
-
-fn initialize_processors() -> HashMap<String, Box<dyn Provider>> {
-    let mut processors: HashMap<String, Box<dyn Provider>> = HashMap::new();
-
-    let git_provider: Box<dyn Provider> = Box::new(GitProvider {});
-    processors.insert(git_provider.types(), git_provider);
-
-    processors
 }
 
 fn create_config_file() {
@@ -92,17 +83,21 @@ fn load_config() -> HashMap<String, Value> {
     configs
 }
 
-fn execute_provider(
-    providers: HashMap<String, Box<dyn Provider>>,
+fn execute_processor(
+    processors: HashMap<String, Box<dyn Processor>>,
     configs: HashMap<String, Value>,
     args: Args,
 ) -> bool {
     for (section, value) in &configs {
         if let Value::Table(table) = value {
-            if table.contains_key(&args.template) && providers.contains_key(section) {
-                let provider = providers.get(section).take().unwrap();
-                let config: &Value = table.get(&args.template).unwrap();
-                return provider.process(args, config);
+            if table.contains_key(&args.template) && processors.contains_key(section) {
+                match processors.get(section).take() {
+                    Some(processor) => {
+                        let config: &Value = table.get(&args.template).unwrap();
+                        return processor.process(args, config);
+                    }
+                    None => {}
+                }
             }
         }
     }

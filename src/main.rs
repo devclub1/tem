@@ -87,5 +87,6 @@ fn execute_processor(
         }
     }
 
+    config::print_and_exit(&format!("Configuration {} was not found", &args.template));
     false
 }

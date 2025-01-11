@@ -1,13 +1,13 @@
+use crate::provider::Provider;
+use crate::Args;
 use std::env;
 use std::process::Command;
 use toml::Value;
-use crate::Args;
-use crate::provider::Provider;
 
 pub struct GitProvider {}
 impl Provider for GitProvider {
     fn types(&self) -> String {
-        return "git".to_string();
+        "git".to_string()
     }
 
     fn process(&self, prog_args: Args, config: &Value) -> bool {
@@ -30,11 +30,27 @@ impl Provider for GitProvider {
                 .unwrap(),
         );
 
-        match &prog_args.project {
+        let target_directory = match &prog_args.project {
             Some(directory) => {
                 args.push(directory);
+                directory.to_string()
             }
-            None => {}
+            None => {
+                let repo_name = config
+                    .get("source")
+                    .unwrap()
+                    .to_string()
+                    .split('/')
+                    .last()
+                    .unwrap()
+                    .to_string();
+
+                if repo_name.ends_with(".git") {
+                    repo_name.rsplit_once(".").map(|(first, _)| first).unwrap().to_string()
+                } else {
+                    repo_name
+                }
+            }
         };
 
         Command::new("git")
@@ -43,6 +59,12 @@ impl Provider for GitProvider {
             .current_dir(env::current_dir().unwrap())
             .output()
             .expect("show:Repository cloning failed");
+
+        Command::new("rm")
+            .arg("-r")
+            .arg(format!("{}/.git", target_directory))
+            .output()
+            .expect("show:Couldn't delete .git directory");
 
         true
     }

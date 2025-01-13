@@ -14,17 +14,14 @@ impl Processor for GitProcessor {
     fn process(&self, prog_args: Args, config: &Value) -> bool {
         let mut args: Vec<&str> = vec![];
 
-        match config.get("branch").take() {
-            Some(branch) => {
-                args.push("-b");
-                args.push(branch.as_str().unwrap());
-            }
-            None => {}
+        if let Some(branch) = config.get(1).take() {
+            args.push("-b");
+            args.push(branch.as_str().unwrap());
         };
 
         args.push(
             config
-                .get("source")
+                .get(0)
                 .take()
                 .expect("show:git: source parameter is mandatory")
                 .as_str()
@@ -38,7 +35,7 @@ impl Processor for GitProcessor {
             }
             None => {
                 let repo_name = config
-                    .get("source")
+                    .get(0)
                     .unwrap()
                     .to_string()
                     .split('/')
@@ -65,13 +62,13 @@ impl Processor for GitProcessor {
             .status()
             .ok()
             .filter(|status| status.success())
-            .and_then(|_| {
+            .map(|_| {
                 let _ = Command::new("rm")
                     .arg("-r")
                     .arg(format!("{}/.git", target_directory))
                     .output();
 
-                Some(true)
+                true
             })
             .unwrap_or(false)
     }

@@ -21,21 +21,46 @@ struct Args {
     project: Option<String>,
 }
 
+struct Commands;
+impl Commands {
+    pub const PROC: &str = "proc";
+    pub const INIT: &str = "init";
+    pub const CONFIG: &str = "config";
+}
+
 fn main() {
     bind_panic_handler();
-    create_config_file(&config::build_default_home_config_path());
 
     let processors = loader::load_processors();
 
-    let matches = build_commands_interface(processors);
+    let unparsed_args: Vec<String> = std::env::args().collect();
+    if unparsed_args.len() < 2 || is_predefined_value(&unparsed_args[1]) {
+        let matches = build_commands_interface(&processors);
+        match matches.subcommand() {
+            Some((Commands::INIT, args)) => {
+                create_config_file(
+                    &config::build_default_home_config_path(),
+                    args.get_flag("force"),
+                );
+            }
+            Some((Commands::CONFIG, _)) => {}
+            Some((Commands::PROC, _)) => {}
+            Some((_, _)) => {}
+            None => {}
+        }
+    } else {
+        let args = Args::parse();
+        let configs = load_config();
 
-    // let args = Args::parse();
-    // let configs = load_config();
-    //
-    // match execute_processor(processors, configs, args) {
-    //     true => println!("\nhappy coding! (◕‿◕)"),
-    //     false => println!("\nouch, something bad happened during processing :("),
-    // }
+        match execute_processor(processors, configs, args) {
+            true => println!("\nhappy coding! (◕‿◕)"),
+            false => println!("\nouch, something bad happened during processing :("),
+        }
+    }
+}
+
+fn is_predefined_value(command: &str) -> bool {
+    command == Commands::CONFIG || command == Commands::INIT || command == Commands::PROC
 }
 
 fn bind_panic_handler() {
@@ -51,7 +76,7 @@ fn bind_panic_handler() {
     }));
 }
 
-fn build_commands_interface(processors: HashMap<String, Box<dyn Processor>>) -> ArgMatches {
+fn build_commands_interface(processors: &HashMap<String, Box<dyn Processor>>) -> ArgMatches {
     let processors_set: HashSet<String> = processors
         .values()
         .map(|obj| obj.as_ref().types().to_string())
@@ -66,10 +91,20 @@ fn build_commands_interface(processors: HashMap<String, Box<dyn Processor>>) -> 
     Command::new("tem")
         .version(env!("CARGO_PKG_VERSION"))
         .about(env!("CARGO_PKG_DESCRIPTION"))
-        .subcommand(Command::new("init").about("Initializes tem config file"))
-        .subcommand(Command::new("config").about("Lists the current config file"))
         .subcommand(
-            Command::new("proc")
+            Command::new(Commands::INIT)
+                .about("Initializes tem config file")
+                .arg(
+                    Arg::new("force")
+                        .long("force")
+                        .required(false)
+                        .help("Recreate config file if already existing")
+                        .action(clap::ArgAction::SetTrue),
+                ),
+        )
+        .subcommand(Command::new(Commands::CONFIG).about("Lists the current config file"))
+        .subcommand(
+            Command::new(Commands::PROC)
                 .about("Prints all available processors or information about a specific processor")
                 .arg(
                     Arg::new("name")
@@ -94,10 +129,10 @@ fn build_commands_interface(processors: HashMap<String, Box<dyn Processor>>) -> 
         .get_matches()
 }
 
-fn create_config_file(config_path: &str) {
+fn create_config_file(config_path: &str, force: bool) {
     let path = Path::new(&config_path);
 
-    if !path.exists() {
+    if !path.exists() || force {
         print!("Creating config file: {}", &config_path);
 
         if let Some(parent) = path.parent() {
@@ -107,6 +142,8 @@ fn create_config_file(config_path: &str) {
         }
 
         File::create(path).expect("show:Couldn't create config file");
+    } else {
+        print!("Config file already exists. Run the command using --force to recreate it");
     }
 }
 

@@ -1,7 +1,7 @@
 [package]
 name = "tem"
 authors = ["devclub1"]
-description = "A CLI tool to prepare your favorite templates blazingly fast"
+description = "A CLI tool to deploy your favorite templates blazingly fast"
 license = "MIT"
 repository = "https://github.com/devclub1/temple"
 version = "0.1.3"

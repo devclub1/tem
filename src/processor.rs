@@ -1,7 +1,9 @@
-use crate::Args;
+use crate::ProcessorArgs;
 use toml::Value;
 
 pub trait Processor {
     fn types(&self) -> String;
-    fn process(&self, prog_args: Args, config: &Value) -> bool;
+    fn help(&self) -> String;
+    fn process(&self, prog_args: ProcessorArgs, config: &Value) -> bool;
 }
+

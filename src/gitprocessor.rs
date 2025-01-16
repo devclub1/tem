@@ -1,5 +1,5 @@
 use crate::processor::Processor;
-use crate::Args;
+use crate::ProcessorArgs;
 use std::env;
 use std::process::Command;
 use toml::Value;
@@ -11,7 +11,28 @@ impl Processor for GitProcessor {
         "git".to_string()
     }
 
-    fn process(&self, prog_args: Args, config: &Value) -> bool {
+    fn help(&self) -> String {
+        String::from(
+            r#"
+git processor usage
+
+Configuration:
+
+[git]
+react-vite = ["git@github.com:axbg/react-vite-starter"]              # target repository, default branch
+react-webpack = ["git@github.com:axbg/react-webpack-starter", "dev"] # target repository, dev branch
+
+
+Execution:
+
+tem react-vite           # clones into a directory with the same name as the repo
+tem react-vite myProject # clones into a directory named myProject
+
+"#,
+        )
+    }
+
+    fn process(&self, prog_args: ProcessorArgs, config: &Value) -> bool {
         let mut args: Vec<&str> = vec![];
 
         if let Some(branch) = config.get(1).take() {

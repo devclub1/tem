@@ -1,7 +1,7 @@
-use std::collections::{HashMap, HashSet};
-use clap::{Arg, ArgMatches, Command, Parser};
 use crate::commands::Commands;
 use crate::processor::Processor;
+use clap::{Arg, ArgMatches, Command, Parser};
+use std::collections::{HashMap, HashSet};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -23,6 +23,7 @@ pub fn parse_commands(processors: &HashMap<String, Box<dyn Processor>>) -> ArgMa
         .join(", ");
 
     Command::new("tem")
+        .arg_required_else_help(true)
         .about(env!("CARGO_PKG_DESCRIPTION"))
         .subcommand(
             Command::new(Commands::INIT)
@@ -62,3 +63,4 @@ pub fn parse_commands(processors: &HashMap<String, Box<dyn Processor>>) -> ArgMa
         .subcommand(Command::new("<<configuration>>").about("executes a specific configuration"))
         .get_matches()
 }
+
